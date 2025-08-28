@@ -1,0 +1,32 @@
+﻿@inherits UiComponentBase
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Токен создан!</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack> 
+           <MudStack Spacing="0">
+                <MudTextField Label="Токен клиента" Lines="21" MaxLines="30" Value="@Token" FullWidth Variant="Variant.Outlined" ReadOnly/>
+                <MudButton Class="rounded-b-xl" FullWidth OnClick="@CopyToken" Color="Color.Tertiary" Variant="Variant.Text">
+                    Скопировать
+                </MudButton>
+           </MudStack>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton FullWidth OnClick="@(() => MudDialog?.Cancel())">Закрыть</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public string? Token { get; set; }
+     
+    private async Task CopyToken()
+    {
+        await JSRuntime.InvokeVoidAsync("legacyCopyText", Token);
+        ShowSuccess("Скопировано в буфер");
+        StateHasChanged();
+    }
+}

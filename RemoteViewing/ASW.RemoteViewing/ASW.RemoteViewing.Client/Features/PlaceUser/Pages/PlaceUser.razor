@@ -1,0 +1,159 @@
+﻿@page "/PlaceUsers" 
+@using ASW.RemoteViewing.Client.Features.PlaceUser.Components
+@inherits UiComponentBase
+@implements IBrowserViewportObserver 
+@inject IBrowserViewportService BrowserViewportService
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject PlaceUserClient PlaceUserClient
+
+<Animate>
+    <AuthorizeView Policy="@Policies.PlaceUser.CanView" Context="authContext">
+        <Authorized>
+            <MudStack>
+                @if (!IsDialogMod)
+                {
+                    <MudText Typo="Typo.h3">Управление клиентами</MudText>
+                }
+            </MudStack>
+            <MudTable Elevation="0" ServerData="@ServerReload" Style="width:auto;" Height="@_heightsTable" RowsPerPage="-1"
+                      Dense="true" Virtualize="true" Hover="true" FixedHeader="true" Breakpoint="Breakpoint.Xs" @ref="table">
+                <ToolBarContent>
+                    <MudStack AlignItems="AlignItems.Center" Row>
+                        <MudButton OnClick="CreatePlaceUser" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success">Новый клиент</MudButton>
+                        <MudIconButton Class="mt-0" OnClick="PlaceUserChange" Size="Size.Medium" Color="Color.Info" Icon="@Icons.Material.Rounded.Refresh" />
+                    </MudStack>
+                    <MudSpacer />
+                    <MudTextField DebounceInterval="300" T="string" ValueChanged="@(s => OnSearch(s))" Placeholder="Поиск" Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortLabel="Name_field" T="PlaceUserDto">Наименование</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="Action_field" T="IntegrationUserDto">Действие</MudTableSortLabel></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd @ondblclick="@(() => OpenPlaceUser(context))" DataLabel="Номер">@context.Name</MudTd>
+                    <MudTd @ondblclick="@(() => OpenPlaceUser(context))" DataLabel="Действие">
+                        <MudTooltip ShowOnClick="false" ShowOnFocus="false" Text="Изменить">
+                            <MudIconButton Size="Size.Small" Icon="@MaterialSymbols.Rounded.EditSquare" OnClick="@(() => OpenPlaceUser(context))" Variant="Variant.Text" Color="Color.Warning"></MudIconButton>
+                        </MudTooltip>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>Записей не найдено</MudText>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudText>Загрузка...</MudText>
+                </LoadingContent>
+            </MudTable>
+        </Authorized>
+        <NotAuthorized>
+            <Error404 />
+        </NotAuthorized>
+        <Authorizing>
+            <MudStack Style="width:100%; height:100%;position:absolute" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.h4">Загружаем</MudText>
+                <MudProgressCircular Color="Color.Info" Indeterminate />
+            </MudStack>
+        </Authorizing>
+    </AuthorizeView>
+</Animate>
+
+@code {
+    [Parameter] public bool IsDialogMod { get; set; } = false; 
+    DialogOptions _dialogOptionsSmall = new DialogOptions() { FullScreen = false, FullWidth = true, CloseButton = true, MaxWidth = MaxWidth.Small };
+    DialogOptions _dialogOptionsExSmall = new DialogOptions() { FullScreen = false, FullWidth = true, CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+    private string searchString = string.Empty;
+    private MudTable<PlaceUserDto>? table;
+    private IEnumerable<PlaceUserDto>? pagedData;
+    private string _heightsTable { get; set; } = "200px";
+
+    private async Task CreatePlaceUser()
+    {
+        var dialog = await DialogService.ShowAsync<CreatePlaceUser>("Создание токена", _dialogOptionsExSmall);
+        var result = await dialog.Result;
+        if (result?.Canceled == false)
+            PlaceUserChange();
+    }
+
+    private async void PlaceUserChange()
+    {
+        if (table is not null)
+            await table.ReloadServerData();
+    }
+    private async Task OpenPlaceUser(PlaceUserDto placeUser)
+    {
+        var parameters = new DialogParameters
+        {
+            ["PlaceUser"] = placeUser,
+        };
+        var dialog = await DialogService.ShowAsync<EditPlaceUser>("Токен", parameters, _dialogOptionsSmall);
+        var result = await dialog.Result;
+        if (result?.Canceled == false)
+            PlaceUserChange();
+    } 
+    private void OnSearch(string text)
+    {
+        searchString = text;
+        PlaceUserChange();
+    }
+
+    private async Task<List<PlaceUserDto>?> GetAllPlaceUsers()
+    { 
+        return await RunSafe(
+            async () => await PlaceUserClient.GetAllAsync(),
+            errorMessage: "Не удалось получить данные"
+        );
+    }
+    private async Task<TableData<PlaceUserDto>> ServerReload(TableState state, CancellationToken ct)
+    {
+        var allUsers = await GetAllPlaceUsers();
+        var filtered = ApplyFilters(allUsers, searchString);   
+        var total = filtered?.Count();
+        var sorted = ApplySorting(filtered, state.SortLabel, state.SortDirection);
+        return new TableData<PlaceUserDto>
+        {
+            TotalItems = total ?? 0,
+            Items = sorted
+        };
+    }
+    private IEnumerable<PlaceUserDto>? ApplyFilters(IEnumerable<PlaceUserDto>? source, string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+            return source;
+             
+        return source?.Where(x => x.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private IEnumerable<PlaceUserDto>? ApplySorting(IEnumerable<PlaceUserDto>? source, string? sortLabel, SortDirection direction)
+    {
+        return sortLabel switch
+        {
+            "Name_field" => source?.OrderByDirection(direction, x => x.Name),
+            _ => source
+        };
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    public async ValueTask DisposeAsync() => await BrowserViewportService.UnsubscribeAsync(this);
+    Guid IBrowserViewportObserver.Id { get; } = Guid.NewGuid();
+    ResizeOptions IBrowserViewportObserver.ResizeOptions { get; } = new()
+    {
+        ReportRate = 50,
+        NotifyOnBreakpointOnly = false
+    };
+    Task IBrowserViewportObserver.NotifyBrowserViewportChangeAsync(BrowserViewportEventArgs browserViewportEventArgs)
+    {
+        _heightsTable = (browserViewportEventArgs.BrowserWindowSize.Height - 210).ToString() + "px";
+        return InvokeAsync(StateHasChanged);
+    } 
+}
+

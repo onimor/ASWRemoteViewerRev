@@ -1,0 +1,45 @@
+﻿@inherits UiComponentBase
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Ваш токен создан!</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack>
+            <MudAlert Severity="Severity.Warning">
+                <MudStack Spacing="2">
+                    <MudText>
+                        Пожалуйста, сохраните его сейчас.
+                    </MudText>
+                    <MudText>
+                        После закрытия этого окна вы больше не сможете его увидеть.
+                    </MudText>
+                    <MudText>
+                        Никогда не передавайте токен третьим лицам — он даёт полный доступ к API.
+                    </MudText>
+                </MudStack> 
+            </MudAlert>
+           <MudStack Spacing="0">
+                <MudTextField Label="Токен интеграции" Lines="3" MaxLines="10" Value="@Token" FullWidth Variant="Variant.Outlined" ReadOnly/>
+                <MudButton Class="rounded-b-xl" FullWidth OnClick="@CopyToken" Color="Color.Tertiary" Variant="Variant.Text">
+                    Скопировать
+                </MudButton>
+           </MudStack>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton FullWidth OnClick="@(() => MudDialog?.Cancel())">Закрыть</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public string? Token { get; set; }
+     
+    private async Task CopyToken()
+    {
+        await JSRuntime.InvokeVoidAsync("legacyCopyText", Token);
+        ShowSuccess("Скопировано в буфер");
+        StateHasChanged();
+    }
+}

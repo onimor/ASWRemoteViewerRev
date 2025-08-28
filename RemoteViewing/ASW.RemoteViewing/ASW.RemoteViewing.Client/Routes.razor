@@ -1,0 +1,32 @@
+﻿@inject IJSRuntime JS 
+@if (!_clientReady)
+{
+    <LayoutView Layout="@typeof(Shared.Layout.LoadingLayout)" />
+}
+else
+{
+    <CascadingAuthenticationState>
+        <Router AppAssembly="typeof(Program).Assembly" >
+        <Found Context="routeData">
+                <RouteView RouteData="routeData" DefaultLayout="typeof(Shared.Layout.MainLayout)" />
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found> 
+        <NotFound>
+            <Error404Layout/>
+        </NotFound>
+    </Router>
+    </CascadingAuthenticationState>
+}
+
+@code {
+    private bool _clientReady = false;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && JS is IJSInProcessRuntime)
+        { 
+            _clientReady = true;
+            StateHasChanged();
+        }
+    }
+}

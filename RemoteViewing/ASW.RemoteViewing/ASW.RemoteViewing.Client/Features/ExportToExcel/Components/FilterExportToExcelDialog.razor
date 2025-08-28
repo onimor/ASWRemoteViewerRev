@@ -1,0 +1,109 @@
+﻿@inject ISnackbar Snackbar
+@inject IDialogService Dialog
+@inject RemoteCounterpartyClient RemoteCounterpartyClient
+@inject RemoteGoodClient RemoteGoodClient
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            Дополнительные фильтры
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_dataIsReedy)
+        {
+            <MudStack>
+                <MudAutocomplete T="RemoteGoodDto" Clearable Label="Груз" ToStringFunc="@((x) => x.Name)" @bind-Value="_selectedRemoteGood" SearchFunc="@SearchRemoteGood"
+                                 ResetValueOnEmptyText="true"
+                                 CoerceText="true" CoerceValue="true" IconSize="Size.Small" />
+                <MudAutocomplete T="RemoteCounterpartyDto" Clearable Label="Отправитель" ToStringFunc="@((x) => x.Name)" @bind-Value="_selectedSender" SearchFunc="@SearchRemoteCounterparty"
+                                 ResetValueOnEmptyText="true"
+                                 CoerceText="true" CoerceValue="true" IconSize="Size.Small" />
+                <MudAutocomplete T="RemoteCounterpartyDto" Clearable Label="Получатель" ToStringFunc="@((x) => x.Name)" @bind-Value="_selectedRecipient" SearchFunc="@SearchRemoteCounterparty"
+                                 ResetValueOnEmptyText="true"
+                                 CoerceText="true" CoerceValue="true" IconSize="Size.Small" />
+                <MudAutocomplete T="RemoteCounterpartyDto" Clearable Label="Плательщик" ToStringFunc="@((x) => x.Name)" @bind-Value="_selectedPayer" SearchFunc="@SearchRemoteCounterparty"
+                                 ResetValueOnEmptyText="true"
+                                 CoerceText="true" CoerceValue="true" IconSize="Size.Small" />
+                <MudAutocomplete T="RemoteCounterpartyDto" Clearable Label="Перевозчик" ToStringFunc="@((x) => x.Name)" @bind-Value="_selectedCarrier" SearchFunc="@SearchRemoteCounterparty"
+                                 ResetValueOnEmptyText="true"
+                                 CoerceText="true" CoerceValue="true" IconSize="Size.Small" />
+                <MudButton Disabled="@_processing" Color="Color.Success" OnClick="Confirm">
+                    @if (_processing)
+                    {
+                        <MudProgressCircular Class="mt-3" Size="Size.Small" Indeterminate="true" />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.button">Экспорт</MudText>
+                    }
+                </MudButton>
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Style="height:300px" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                <MudProgressCircular Size="Size.Medium" Color="Color.Info" Indeterminate />
+            </MudStack>
+        }
+
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }  
+    private RemoteGoodDto? _selectedRemoteGood { get; set; }
+    private RemoteCounterpartyDto? _selectedSender { get; set; }
+    private RemoteCounterpartyDto? _selectedRecipient { get; set; }
+    private RemoteCounterpartyDto? _selectedCarrier { get; set; }
+    private RemoteCounterpartyDto? _selectedPayer { get; set; }
+    private List<RemoteGoodDto>? _goods { get; set; } = new();
+    private List<RemoteCounterpartyDto>? _counterparties { get; set; } = new();
+    private bool _processing { get; set; } = false;
+    private bool _dataIsReedy { get; set; } = false;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+        {
+            _goods = await RemoteGoodClient.GetAllAsync();
+            _counterparties = await RemoteCounterpartyClient.GetAllAsync();
+            _dataIsReedy = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<IEnumerable<RemoteGoodDto>?> SearchRemoteGood(string value, CancellationToken cancellationToken)
+    {
+        // In real life use an asynchronous function for fetching data from an api.
+        await Task.Delay(5);
+
+        // if text is null or empty, don't return values (drop-down will not open)
+        if (string.IsNullOrEmpty(value))
+            return _goods;
+        return _goods?.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+    private async Task<IEnumerable<RemoteCounterpartyDto>?> SearchRemoteCounterparty(string value, CancellationToken cancellationToken)
+    {
+        // In real life use an asynchronous function for fetching data from an api.
+        await Task.Delay(5);
+
+        // if text is null or empty, don't return values (drop-down will not open)
+        if (string.IsNullOrEmpty(value))
+            return _counterparties;
+        return _counterparties?.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+    private void Confirm()
+    {
+        MudDialog.Close(new ExportToExcelFiltersDto
+        {
+            GoodId = _selectedRemoteGood is null ? Guid.Empty : _selectedRemoteGood.Id,
+            SenderId = _selectedSender is null ? Guid.Empty : _selectedSender.Id,
+            PayerId = _selectedPayer is null ? Guid.Empty : _selectedPayer.Id,
+            CarrierId = _selectedCarrier is null ? Guid.Empty : _selectedCarrier.Id,
+            RecipientId = _selectedRecipient is null ? Guid.Empty : _selectedRecipient.Id,
+        });
+    }
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

@@ -1,0 +1,279 @@
+﻿@page "/"  
+@inherits UiComponentBase
+@implements IBrowserViewportObserver 
+@inject IBrowserViewportService BrowserViewportService
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject RemoteWeighingClient RemoteWeighingClient 
+@inject RemotePostClient RemotePostClient
+@inject ExportClient ExportClient
+
+<Animate>
+    <AuthorizeView Policy="@Policies.RemoteWeighing.CanView" Context="authContext">
+        <Authorized>
+            <MudStack>
+                <MudText Typo="Typo.h3">Журнал взвешиваний</MudText>
+                <MudStack Row>
+                    <MudStack Style="max-width:250px">
+                        <MudDateRangePicker Editable Label="Период" @bind-DateRange="_selectedDateRange" @bind-DateRange:after="WeighingChange" />
+                    </MudStack>
+                    <MudStack Style="max-width:180px; min-width:180px">
+                        <MudSelect Label="Пост" @bind-Value="_selectedPost" @bind-Value:after="WeighingChange" T="RemotePostDto">
+                            @foreach (var post in _posts!)
+                            {
+                                <MudSelectItem Value="post">@post.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudStack>
+                    <MudStack Style="max-width:180px; min-width:180px">
+                        <MudSelect Label="Взвешивания" @bind-Value="_selectedWeighingStage" @bind-Value:after="WeighingChange" T="string">
+                            @foreach (var weighingStage in _weighingStages)
+                            {
+                                <MudSelectItem Value="weighingStage" />
+                            }
+                        </MudSelect>
+                    </MudStack>
+                    <MudSpacer />
+                    <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Row>
+                        @if (_processingExportToExcel)
+                        {
+                            <MudProgressCircular Indeterminate Color="Color.Info" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            <MudMenu TransformOrigin="Origin.CenterLeft" AnchorOrigin="Origin.CenterLeft" ActivationEvent="@MouseEvent.LeftClick">
+                                <ActivatorContent>
+                                    <MudIconButton Icon="@MaterialDesignIcons.Normal.MicrosoftExcel" Color="Color.Success" Size="Size.Medium" />
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <MudMenuItem Icon="@Icons.Material.Rounded.Download" IconColor="Color.Success" OnClick="@(() => ExportWeighingToExcel())">
+                                        Экспорт
+                                    </MudMenuItem>
+                                    <MudMenuItem Icon="@Icons.Material.Rounded.FilterAlt" IconColor="Color.Success" OnClick="OpenFilterExportToExcelDialog">
+                                        Доп. фильтры
+                                    </MudMenuItem>
+                                </ChildContent>
+                            </MudMenu>
+                        }
+                    </MudStack>
+                </MudStack>
+            </MudStack>
+            <MudTable Elevation="0" ServerData="@ServerReload" Style="width:auto;" Height="@_heightsTable" RowsPerPage="-1"
+                      Dense="true" Virtualize="true" Hover="true" FixedHeader="true" Breakpoint="Breakpoint.Xs" @ref="table">
+                <ToolBarContent>
+
+                    <MudIconButton Class="mt-0" OnClick="WeighingChange" Size="Size.Medium" Color="Color.Info" Icon="@Icons.Material.Rounded.Refresh" />
+
+                    <MudSpacer />
+                    <MudTextField T="string" ValueChanged="@(s => OnSearch(s))" Placeholder="Поиск" Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortLabel="Number_field" T="RemoteWeighingDto">Номер</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="Post_field" T="RemoteWeighingDto">Пост</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="DateTara_field" T="RemoteWeighingDto">Дата тара</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="DateBrutto_field" T="RemoteWeighingDto">Дата брутто</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="DateTara_field" T="RemoteWeighingDto">Тара</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="DateBrutto_field" T="RemoteWeighingDto">Брутто</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="Netto_field" T="RemoteWeighingDto">Нетто</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="CarNumber_field" T="RemoteWeighingDto">ТС</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="Good_field" T="RemoteWeighingDto">Груз</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="AddedUserName_field" T="RemoteWeighingDto">Пользователь</MudTableSortLabel></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="Номер">@context.Number</MudTd>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="Пост">@context.PostName</MudTd>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="Дата тара">@context.DateTara</MudTd>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="Дата брутто">@context.DateBrutto</MudTd>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="Тара">@context.Tara</MudTd>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="Брутто">@context.Brutto</MudTd>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="Нетто">@context.Netto</MudTd>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="ТС">@context.CarName</MudTd>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="Груз">@context.GoodsName</MudTd>
+                    <MudTd Style="@GetRowStyle(context)" @ondblclick="@(() => OpenWeight(context))" DataLabel="Пользователь">@context.AddedUserName</MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>Записей не найдено</MudText>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudText>Загрузка...</MudText>
+                </LoadingContent>
+            </MudTable>
+        </Authorized>
+        <NotAuthorized>
+            <Error404/>
+        </NotAuthorized>
+        <Authorizing>
+            <MudStack Style="width:100%; height:100%;position:absolute" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.h4">Загружаем</MudText>
+                <MudProgressCircular Color="Color.Info" Indeterminate />
+            </MudStack>
+        </Authorizing>
+    </AuthorizeView>
+</Animate> 
+@code {
+    DialogOptions fullScreen = new DialogOptions() { FullScreen = true, CloseButton = false };
+    DialogOptions small = new DialogOptions() { FullScreen = false, FullWidth = true, CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+    private string searchString = string.Empty;
+    private MudTable<RemoteWeighingDto>? table;
+    private IEnumerable<RemoteWeighingDto>? pagedData;
+    private DateRange _selectedDateRange { get; set; } = new(DateTime.Now.Date, DateTime.Now.Date);
+    private List<string> _weighingStages = new List<string> { "Все", "Одно взвешивание", "Оформленные" };
+    private string _selectedWeighingStage { get; set; } = "Все";
+    private List<RemotePostDto>? _posts { get; set; } = new List<RemotePostDto> { new RemotePostDto { Name = "Все" } };
+    private RemotePostDto? _selectedPost { get; set; }
+    private string _heightsTable { get; set; } = "200px";
+    private bool _processingExportToExcel { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedPost = _posts?.FirstOrDefault();
+        await RunSafe(async () =>
+        {
+            var posts = await RemotePostClient.GetAllAsync();
+            if (posts is not null)
+                _posts?.AddRange(posts);
+        });
+    }
+    private string GetRowStyle(RemoteWeighingDto context)
+    {
+        return context.IsRemoved ? "background:#b8353550"
+        : context.IsFormed ? "background:#2f875850"
+        : string.Empty;
+    }
+    private async void WeighingChange()
+    {
+        if (table is not null)
+            await table.ReloadServerData();
+    }
+    private void OpenWeight(RemoteWeighingDto weighing)
+    {
+        var parameters = new DialogParameters
+            {
+                ["WeighingId"] = weighing?.Id,
+            };
+        // DialogService.Show<OpenWeightFromLogDialog>("Взвешивание", parameters, fullScreen);
+    }
+    private async Task ExportWeighingToExcel(ExportToExcelFiltersDto? exportToExcelFilters = null)
+    {
+        _processingExportToExcel = true;
+        await RunSafe(async () =>
+        {
+            if (_selectedPost is not null)
+            {
+                var fileName = $"Выгрузка_взвешиваний_{DateTime.Now:dd_MM_yyyy_HH_mm_ss}.xlsx";
+                var bytes = await ExportClient.ExportRemoteWeighingsToExcel(new ExportWeighingToExcelRequest
+                    {
+                        DateStart = _selectedDateRange.Start,
+                        DateEnd = _selectedDateRange.End?.Date.AddDays(1).AddTicks(-1),
+                        PostId = _selectedPost.Id,
+                        PostName = _selectedPost.Name,
+                        WeighingStage = _selectedWeighingStage,
+                        Filters = exportToExcelFilters
+                    });
+                await JSRuntime.InvokeVoidAsync("saveExcelFromByteArray", fileName, bytes);
+            }
+        });
+        _processingExportToExcel = false;
+        StateHasChanged();
+    }
+    private async Task OpenFilterExportToExcelDialog()
+    { 
+        var dialog = await DialogService.ShowAsync<FilterExportToExcelDialog>("Доп фильтры", small);
+        var result = await dialog.Result;
+        if(result?.Canceled == false)
+        {
+            var filters = (ExportToExcelFiltersDto?)result.Data;
+            await ExportWeighingToExcel(filters);
+        }
+    }
+    private void OnSearch(string text)
+    {
+        searchString = text;
+        WeighingChange();
+    } 
+    private async Task<List<RemoteWeighingDto>?> GetRemoteWeighingsAsync()
+    {
+        return await RunSafe( async () =>
+            await RemoteWeighingClient.GetByDateAsync(new RemoteWeightByDateRequest
+            {
+                DateStart = _selectedDateRange.Start,
+                DateEnd = _selectedDateRange.End?.Date.AddDays(1).AddTicks(-1)
+            }),
+            errorMessage: "Не удалось получить данные"
+        );
+    }
+
+    private IEnumerable<RemoteWeighingDto>? ApplyFilters(IEnumerable<RemoteWeighingDto>? source)
+    {
+        if (_selectedWeighingStage == "Одно взвешивание")
+            source = source?.Where(x => !x.IsFormed);
+        else if (_selectedWeighingStage == "Оформленные")
+            source = source?.Where(x => x.IsFormed);
+
+        if (_selectedPost is not null && _selectedPost.Name != "Все")
+            source = source?.Where(x => x.PostId == _selectedPost.Id);
+
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            source = source?.Where(x => 
+                x.CarName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false);
+        }
+
+        return source;
+    }
+
+    private IEnumerable<RemoteWeighingDto>? ApplySorting(IEnumerable<RemoteWeighingDto>? source, string? sortLabel, SortDirection direction)
+    {
+        return sortLabel switch
+        {
+            "Number_field" => source?.OrderByDirection(direction, o => o.Number),
+            "Post_field" => source?.OrderByDirection(direction, o => o.PostName),
+            "DateBrutto_field" => source?.OrderByDirection(direction, o => o.DateBrutto),
+            "Netto_field" => source?.OrderByDirection(direction, o => o.Netto),
+            "DateTara_field" => source?.OrderByDirection(direction, o => o.DateTara),
+            "CarNumber_field" => source?.OrderByDirection(direction, o => o.CarName),
+            "Good_field" => source?.OrderByDirection(direction, o => o.GoodsName),
+            _ => source
+        };
+    }
+
+    private async Task<TableData<RemoteWeighingDto>> ServerReload(TableState state, CancellationToken cancellationToken)
+    { 
+        var allData = await GetRemoteWeighingsAsync();
+        var filtered = ApplyFilters(allData);
+        var total = filtered?.Count();
+        var sorted = ApplySorting(filtered, state.SortLabel, state.SortDirection);
+
+        return new TableData<RemoteWeighingDto>
+        {
+            TotalItems = total ?? 0,
+            Items = sorted
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    public async ValueTask DisposeAsync() => await BrowserViewportService.UnsubscribeAsync(this);
+    Guid IBrowserViewportObserver.Id { get; } = Guid.NewGuid();
+    ResizeOptions IBrowserViewportObserver.ResizeOptions { get; } = new()
+    {
+        ReportRate = 50,
+        NotifyOnBreakpointOnly = false
+    };
+    Task IBrowserViewportObserver.NotifyBrowserViewportChangeAsync(BrowserViewportEventArgs browserViewportEventArgs)
+    {
+        _heightsTable = (browserViewportEventArgs.BrowserWindowSize.Height - 275).ToString() + "px";
+        return InvokeAsync(StateHasChanged);
+    } 
+}
+

@@ -1,0 +1,49 @@
+﻿@inherits UiComponentBase
+@inject IDialogService DialogService 
+@inject PlaceUserClient PlaceUserClient
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Создание клиента</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack>
+            <MudTextField @bind-Value="createPlaceUserRequest.Name" Label="Наименование" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Отмена</MudButton>
+        <MudButton Disabled="@Processing" Color="Color.Success" OnClick="CreateAsync">
+            @if (Processing)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+            }
+            else
+            {
+                <MudText Typo="Typo.button">СОЗДАТЬ</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    private CreatePlaceUserRequest createPlaceUserRequest { get; set; } = new(); 
+    private DialogOptions _dialogOptions = new() { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = false, BackdropClick = false };
+    private async Task CreateAsync() => await RunSafe(async () =>
+    {
+       if (string.IsNullOrEmpty(createPlaceUserRequest.Name))
+           throw new ValidationException("Наименование не может быть пустым");
+
+       var result = await PlaceUserClient.CreateAsync(createPlaceUserRequest);
+       var parameters = new DialogParameters
+       {
+           ["Token"] = result?.Token,
+       };
+       MudDialog?.Close();
+       await DialogService.ShowAsync<ViewPlaceUserToken>("Токен доступа", parameters, _dialogOptions);
+    }, showProcessing: true);
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+}

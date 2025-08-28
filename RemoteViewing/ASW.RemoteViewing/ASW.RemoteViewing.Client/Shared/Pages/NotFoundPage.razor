@@ -1,0 +1,9 @@
+﻿@page "/{*path:nonfile}" 
+
+<MudStack Class="d-flex align-center justify-center" Style="height:calc(100dvh - 184px);">
+    <Error404/>
+</MudStack>
+
+@code {
+    [Parameter] public string? Path { get; set; } // обязательно объявить параметр!
+}

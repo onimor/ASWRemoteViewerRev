@@ -1,0 +1,119 @@
+﻿@inherits UiComponentBase
+@inject IDialogService DialogService
+@inject IntegrationUserClient IntegrationUserClient
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Интеграционный токен</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack>
+            <MudTextField @bind-Value="_name" Label="Наименование" />
+            <MudTextField ReadOnly @bind-Value="IntegrationUser.KeyPrefix" Label="Префикс" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Отмена</MudButton>
+        @if (Processing)
+        {
+            <MudStack Class="pa-2">
+                <MudProgressCircular Color="Color.Info" Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+            </MudStack>
+        }
+        else
+        {
+            <MudButton Disabled="@Processing" Color="Color.Error" OnClick="DeleteAsync">
+                Удалить
+            </MudButton>
+            <MudButton Disabled="@Processing" Color="Color.Warning" OnClick="UpdateKeyAsync">
+                Перевыпустить
+            </MudButton>
+            <MudButton Disabled="@Processing" Color="Color.Success" OnClick="UpdateAsync">
+                Сохранить
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public required IntegrationUserDto IntegrationUser { get; set; }
+    private string? _name = string.Empty;
+
+    private DialogOptions _dialogOptionsSmall = new() { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = false, BackdropClick = false };
+    private DialogOptions _dialogOptionsExSmall = new() { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+
+    protected override void OnParametersSet()
+    {
+        if (IntegrationUser is null)
+        {
+            ShowError("Не удалось открыть");
+            Cancel();
+        }
+        _name = IntegrationUser?.Name;
+    }
+
+    private async Task UpdateAsync()
+    {
+        await RunSafe(async () =>
+        {
+            if (string.IsNullOrEmpty(_name))
+                throw new ValidationException("Наименование не может быть пустым");
+
+            await IntegrationUserClient.UpdateAsync(IntegrationUser.Id, new UpdateIntegrationUserRequest
+            {
+                Name = _name
+            });
+            MudDialog?.Close();
+        }, showProcessing: true);
+    }
+
+    private async Task DeleteAsync()
+    {
+        await RunSafe(async () =>
+        {
+            var parameters = new DialogParameters
+            {
+                ["ContentText"] = "Вы уверены, что хотите удалить токен?",
+                ["ButtonText"] = "Удалить",
+                ["Color"] = Color.Error
+            };
+
+            var dialog = await DialogService.ShowAsync<WarningDialog>("Удаление", parameters, _dialogOptionsExSmall);
+            var result = await dialog.Result;
+            if (result?.Canceled == false)
+            {
+                await IntegrationUserClient.DeleteAsync(IntegrationUser.Id);
+                MudDialog?.Close();
+            }
+        }, showProcessing: true);
+    }
+
+    private async Task UpdateKeyAsync()
+    {
+        await RunSafe(async () =>
+        {
+            var parameters = new DialogParameters
+            {
+                ["ContentText"] = "Вы уверены, что хотите перевыпустить Токен?",
+                ["ButtonText"] = "Перевыпустить",
+                ["Color"] = Color.Warning
+            };
+
+            var dialog = await DialogService.ShowAsync<WarningDialog>("Перевыпуск", parameters, _dialogOptionsExSmall);
+            var result = await dialog.Result;
+            if (result?.Canceled == false)
+            {
+                var updateResult = await IntegrationUserClient.UpdateKeyAsync(IntegrationUser.Id);
+                var viewTokenParameters = new DialogParameters
+                {
+                    ["Token"] = updateResult?.Token,
+                };
+                MudDialog?.Close();
+                await DialogService.ShowAsync<ViewIntegrationUserToken>("Токен доступа", viewTokenParameters, _dialogOptionsSmall);
+            }
+        }, showProcessing: true);
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+}

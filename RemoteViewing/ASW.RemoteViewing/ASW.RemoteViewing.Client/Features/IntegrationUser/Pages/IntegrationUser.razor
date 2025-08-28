@@ -1,0 +1,167 @@
+﻿@page "/IntegrationUsers"  
+@inherits UiComponentBase
+@implements IBrowserViewportObserver 
+@inject IBrowserViewportService BrowserViewportService
+@inject IDialogService DialogService 
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject IntegrationUserClient IntegrationUserClient
+
+<Animate>
+    <AuthorizeView Policy="@Policies.IntegrationUser.CanView" Context="authContext">
+        <Authorized>
+            <MudStack>
+                @if (!IsDialogMod)
+                {
+                   <MudStack AlignItems="AlignItems.Center" Row>
+                        <MudText Typo="Typo.h3">Интеграция</MudText>
+                        <MudTooltip ShowOnFocus="false" Text="Информация по интеграции"> 
+                            <MudIconButton OnClick="OpenIntegrationGuide" Size="Size.Medium" Icon="@Icons.Material.Outlined.Info" Color="Color.Warning" />
+                        </MudTooltip>
+                   </MudStack>
+                } 
+            </MudStack>
+            <MudTable Elevation="0" ServerData="@ServerReload" Style="width:auto;" Height="@_heightsTable" RowsPerPage="-1"
+                      Dense="true" Virtualize="true" Hover="true" FixedHeader="true" Breakpoint="Breakpoint.Xs" @ref="table">
+                <ToolBarContent> 
+                    <MudStack AlignItems="AlignItems.Center" Row>
+                        <MudButton OnClick="CreateIntegrationUser" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success">Создать токен</MudButton>
+                        <MudIconButton Class="mt-0" OnClick="IntegrationUserChange" Size="Size.Medium" Color="Color.Info" Icon="@Icons.Material.Rounded.Refresh" />
+                    </MudStack> 
+                    <MudSpacer />
+                    <MudTextField DebounceInterval="300" T="string" ValueChanged="@(s => OnSearch(s))" Placeholder="Поиск" Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortLabel="Name_field" T="IntegrationUserDto">Наименование</MudTableSortLabel></MudTh> 
+                    <MudTh><MudTableSortLabel SortLabel="KeyPrefix_field" T="IntegrationUserDto">Префикс токена</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortLabel="Action_field" T="IntegrationUserDto">Действие</MudTableSortLabel></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd @ondblclick="@(() => OpenIntegrationUser(context))" DataLabel="Номер">@context.Name</MudTd>  
+                    <MudTd @ondblclick="@(() => OpenIntegrationUser(context))" DataLabel="Префикс токена">@context.KeyPrefix</MudTd>
+                    <MudTd @ondblclick="@(() => OpenIntegrationUser(context))" DataLabel="Действие">
+                        <MudTooltip ShowOnClick="false" ShowOnFocus="false" Text="Изменить"> 
+                            <MudIconButton Size="Size.Small" Icon="@MaterialSymbols.Rounded.EditSquare" OnClick="@(() => OpenIntegrationUser(context))" Variant="Variant.Text" Color="Color.Warning"></MudIconButton>
+                        </MudTooltip>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>Записей не найдено</MudText>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudText>Загрузка...</MudText>
+                </LoadingContent>
+            </MudTable>
+        </Authorized>
+        <NotAuthorized>
+            <Error404/>
+        </NotAuthorized>
+        <Authorizing>
+            <MudStack Style="width:100%; height:100%;position:absolute" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.h4">Загружаем</MudText>
+                <MudProgressCircular Color="Color.Info" Indeterminate />
+            </MudStack>
+        </Authorizing>
+    </AuthorizeView>
+</Animate>
+
+@code {
+    [Parameter] public bool IsDialogMod { get; set; } = false; 
+    DialogOptions _dialogOptionsSmall = new DialogOptions() { FullScreen = false, FullWidth = true, CloseButton = true, MaxWidth = MaxWidth.Small };
+    DialogOptions _dialogOptionsExSmall = new DialogOptions() { FullScreen = false, FullWidth = true, CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+    private string searchString = string.Empty;
+    private MudTable<IntegrationUserDto>? table;
+    private IEnumerable<IntegrationUserDto>? pagedData;
+    private string _heightsTable { get; set; } = "200px";
+
+    private async Task CreateIntegrationUser()
+    {
+        var dialog = await DialogService.ShowAsync<CreateIntegrationUser>("Создание токена", _dialogOptionsExSmall);
+        var result = await dialog.Result;
+        if (result?.Canceled == false)
+            IntegrationUserChange();
+    }
+    private async Task OpenIntegrationGuide()
+    {
+        await DialogService.ShowAsync<IntegrationGuide>("API Интеграция", _dialogOptionsSmall);
+    }
+    private async void IntegrationUserChange()
+    {
+        if (table is not null)
+            await table.ReloadServerData();        
+    }
+    private async Task OpenIntegrationUser(IntegrationUserDto integrationUser)
+    {
+        var parameters = new DialogParameters
+        {
+            ["IntegrationUser"] = integrationUser,
+        };
+        var dialog = await DialogService.ShowAsync<EditIntegrationUser>("Интеграционный ключ", parameters, _dialogOptionsSmall);
+        var result = await dialog.Result;
+        if (result?.Canceled == false)
+            IntegrationUserChange();
+    }
+    private void OnSearch(string text)
+    {
+        searchString = text;
+        IntegrationUserChange();
+    }
+    private async Task<List<IntegrationUserDto>?> GetAllIntegrationUsers()
+    {
+        return await RunSafe(
+            async () => await IntegrationUserClient.GetAllAsync(),
+            errorMessage: "Не удалось получить данные"
+        );
+    }
+    private async Task<TableData<IntegrationUserDto>> ServerReload(TableState state, CancellationToken ct)
+    {
+        var allUsers = await GetAllIntegrationUsers();
+        var filtered = ApplyFilters(allUsers, searchString);   
+        var total = filtered?.Count();
+        var sorted = ApplySorting(filtered, state.SortLabel, state.SortDirection);
+        return new TableData<IntegrationUserDto>
+        {
+            TotalItems = total ?? 0,
+            Items = sorted
+        };
+    }
+    private IEnumerable<IntegrationUserDto>? ApplyFilters(IEnumerable<IntegrationUserDto>? source, string? search)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+            return source;
+
+        return source?.Where(x => x.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private IEnumerable<IntegrationUserDto>? ApplySorting(IEnumerable<IntegrationUserDto>? source, string? sortLabel, SortDirection direction)
+    {
+        return sortLabel switch
+        {
+            "Name_field" => source?.OrderByDirection(direction, x => x.Name),
+            _ => source
+        };
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    public async ValueTask DisposeAsync() => await BrowserViewportService.UnsubscribeAsync(this);
+    Guid IBrowserViewportObserver.Id { get; } = Guid.NewGuid();
+    ResizeOptions IBrowserViewportObserver.ResizeOptions { get; } = new()
+    {
+        ReportRate = 50,
+        NotifyOnBreakpointOnly = false
+    };
+    Task IBrowserViewportObserver.NotifyBrowserViewportChangeAsync(BrowserViewportEventArgs browserViewportEventArgs)
+    {
+        _heightsTable = (browserViewportEventArgs.BrowserWindowSize.Height - 210).ToString() + "px";
+        return InvokeAsync(StateHasChanged);
+    }  
+}
+

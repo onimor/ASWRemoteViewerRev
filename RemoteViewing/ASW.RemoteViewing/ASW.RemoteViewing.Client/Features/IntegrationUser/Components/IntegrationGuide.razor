@@ -1,0 +1,60 @@
+﻿@inject IDialogService Dialog
+@inject NavigationManager NavigationManager
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Class="mb-2">API Интеграция</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="2"> 
+                <MudText Typo="Typo.body1">
+                    Чтобы использовать API, вам необходимо создать токен доступа и передавать его в каждом запросе через заголовок <b>X-Api-Key</b>.
+                </MudText> 
+            <MudDivider /> 
+                <MudText Typo="Typo.h6" Class="mb-2">Как получить токен?</MudText>
+                <MudList ReadOnly T="string" Dense="true">
+                    <MudListItem>1. Создайте новый токен, указав произвольное название.</MudListItem>
+                    <MudListItem>2. Скопируйте токен и сохраните его. После создания повторно получить его будет невозможно.</MudListItem>
+                    <MudListItem>3. Используйте токен в каждом запросе в заголовке <b>X-Api-Key</b>.</MudListItem>
+                </MudList> 
+            <MudDivider /> 
+                <MudStack>
+                    <MudText Typo="Typo.h6">Примеры запроса</MudText>
+
+                    <MudPaper Class="px-2" Outlined>
+<pre>
+curl -X GET "@($"{NavigationManager.BaseUri}api/v1/Remote/Posts/Weighings")" 
+  -H "X-Api-Key: dev_123456789ABCDEF" 
+  -H "Content-Type: application/json"
+</pre>
+                    </MudPaper>
+
+                    <MudPaper Class="px-2" Outlined>
+                        <MudText>C#</MudText>
+<pre>
+var url = "@($"{NavigationManager.BaseUri}api/v1/Remote/Posts/Weighings")";
+using var client = new HttpClient();
+client.DefaultRequestHeaders.Add("X-Api-Key", "dev_123456789ABCDEF");
+var result = await client.GetAsync(url);
+</pre>
+                    </MudPaper>
+                    <MudPaper Class="px-2" Outlined>
+                        <MudText>1C</MudText>
+<pre>
+&НаКлиенте
+HTTPСоединение = Новый HTTPСоединение(@($"{NavigationManager.BaseUri.TrimEnd('/')}"));
+Запрос = Новый HTTPЗапрос("GET", "/api/v1/Remote/Posts/Weighings");
+Запрос.УстановитьЗаголовок("X-Api-Key", "dev_123456789ABCDEF");
+Ответ = HTTPСоединение.Получить(Запрос);
+ТекстОтвета = Ответ.ПолучитьТелоКакСтроку();
+</pre>
+                    </MudPaper>
+                </MudStack> 
+            <MudButton Variant="Variant.Text" Color="Color.Info" Href="/swagger" Target="_blank">
+                Перейти к описанию API
+            </MudButton> 
+        </MudStack>
+    </DialogContent>
+</MudDialog>
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+}

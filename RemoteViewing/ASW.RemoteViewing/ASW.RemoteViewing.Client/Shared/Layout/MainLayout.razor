@@ -1,0 +1,121 @@
+﻿@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthProvider
+@inject ISnackbar SnackbarService
+@inject IDialogService DialogService
+@inject IAuthService AuthService
+@inject IUserContextService UserContextService
+@inject MudThemeHolder ThemeHolder
+
+<MudThemeProvider IsDarkMode="@_isDarkMod" Theme="ThemeHolder.defaultTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudLayout>
+    <AuthorizeView>
+        <Authorized>
+            <MudAppBar Elevation="0" Class="mud-appbar mud-appbar-fixed-top mud-elevation-0 mud-theme-transparent docs-appbar-filter">
+                <MudIconButton Icon="@Icons.Material.Rounded.Notes" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+                <MudSpacer />
+                <MudIconButton Size="Size.Medium" OnClick="@((e) => DarkMode(false))" Icon="@(_isDarkMod? @Icons.Material.Rounded.LightMode : @Icons.Material.Rounded.ModeNight)" Color="Color.Inherit" />
+            </MudAppBar>
+            <MudDrawer Variant="@DrawerVariant.Temporary" @bind-Open="@_drawerOpen">
+                <MudStack Style="height:auto" AlignItems="AlignItems.Center" Justify="Justify.Center">
+                    <MudImage Class="pa-1" Style="width:100%;" Fluid="true" ObjectPosition="ObjectPosition.Center" ObjectFit="ObjectFit.Cover" Src="/img/logo/logo-M.png" />
+                </MudStack>
+                <NavMenu />
+                <MudSpacer />
+                <MudDivider Class="mt-3 mb-2" DividerType="DividerType.Middle" />
+                <MudStack Class="ma-1 mb-2" Row>
+                    <MudIconButton Size="Size.Medium" OnClick="@((e) => DarkMode(false))" Icon="@(_isDarkMod? @Icons.Material.Rounded.LightMode : @Icons.Material.Rounded.ModeNight)" Color="Color.Inherit" />
+                    <MudSpacer />
+                    <MudButton Size="Size.Medium" OnClick="@SignOut" Variant="Variant.Text" IconColor="Color.Inherit" StartIcon="@Icons.Material.Rounded.Logout" IconSize="Size.Medium">Выйти</MudButton>
+                </MudStack>
+            </MudDrawer>
+            <MudMainContent>
+                <MudContainer Class="pa-3" MaxWidth="MaxWidth.ExtraExtraLarge">
+                    @Body
+                </MudContainer>
+            </MudMainContent>
+        </Authorized>
+        <NotAuthorized>
+            <MudStack Spacing="0" Style="width:100vw; height:70vh; position:fixed; top:0; left:0;" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                <MudCard Style="max-width: 400px;min-width: 300px;">
+                    <MudCardContent>
+                        <MudForm>
+                          <MudStack>
+                                <MudTextField IconSize="Size.Small" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Person" T="string" Label="Логин" @bind-Text=@_login />
+                                <MudTextField IconSize="Size.Small" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Lock" T="string" Label="Пароль" @bind-Text="@_pass" InputType="InputType.Password" />
+                                <MudCheckBox T="bool" @bind-Value="@_isRememberMy" Class="ml-n2" Label="Запомнить меня" />
+                          </MudStack>
+                        </MudForm>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton OnClick="SignIn" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Войти</MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudStack>
+        </NotAuthorized>
+        <Authorizing>
+            <MudStack Spacing="0" Style="width:100vw; height:100vh; position:fixed; top:0; left:0;" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.h4">Авторизация</MudText>
+                <MudProgressCircular Color="Color.Info" Indeterminate Class="mt-4" />
+            </MudStack>
+        </Authorizing>
+    </AuthorizeView>
+</MudLayout>
+
+@code {
+    private bool _isDarkMod { get; set; }
+    private string _login { get; set; } = string.Empty;
+    private string _pass { get; set; } = string.Empty;
+    private bool _drawerOpen = false;
+    private bool _isRememberMy;
+
+    protected override void OnInitialized()
+    {
+        DarkMode(true);
+    }
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task SignIn()
+    {
+        var dialog = await DialogService.ShowAsync<LoadingDialog>("Авторизация", new DialogOptions() { BackdropClick = true });
+        try
+        {
+            var result = await AuthService.SignInAsync(_login, _pass, _isRememberMy);
+            if (result)
+            {
+                var userId = await UserContextService.GetUserIdAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            await AuthService.SignOutAsync();
+            SnackbarService.Add(ex.Message, Severity.Error);
+        }
+        dialog.Close();
+        this.StateHasChanged();
+    }
+
+    private async Task SignOut()
+    {
+        await AuthService.SignOutAsync();
+        this.StateHasChanged();
+    }
+
+    void DarkMode(bool isStart)
+    {
+        if (isStart)
+        {
+            _isDarkMod = true;
+        }
+        else
+        {
+            _isDarkMod = !_isDarkMod;
+        }
+    }
+}
