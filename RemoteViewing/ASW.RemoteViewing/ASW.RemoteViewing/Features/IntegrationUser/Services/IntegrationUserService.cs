@@ -10,7 +10,7 @@ using ASW.RemoteViewing.Shared.Requests.IntegrationUser;
 using ASW.RemoteViewing.Shared.Responses.Authentication;
 using ASW.RemoteViewing.Shared.Security;
 using ASW.RemoteViewing.Shared.Utilities;
-using ASW.Shared.Extentions;
+using ASW.Shared.Extension;
 using Microsoft.EntityFrameworkCore;
 
 public class IntegrationUserService : IIntegrationUserService

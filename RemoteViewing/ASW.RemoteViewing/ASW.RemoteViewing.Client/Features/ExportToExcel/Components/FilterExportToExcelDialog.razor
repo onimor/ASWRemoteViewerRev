@@ -1,7 +1,8 @@
-﻿@inject ISnackbar Snackbar
+﻿@inherits UiComponentBase 
 @inject IDialogService Dialog
 @inject RemoteCounterpartyClient RemoteCounterpartyClient
 @inject RemoteGoodClient RemoteGoodClient
+
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -27,15 +28,8 @@
                 <MudAutocomplete T="RemoteCounterpartyDto" Clearable Label="Перевозчик" ToStringFunc="@((x) => x.Name)" @bind-Value="_selectedCarrier" SearchFunc="@SearchRemoteCounterparty"
                                  ResetValueOnEmptyText="true"
                                  CoerceText="true" CoerceValue="true" IconSize="Size.Small" />
-                <MudButton Disabled="@_processing" Color="Color.Success" OnClick="Confirm">
-                    @if (_processing)
-                    {
-                        <MudProgressCircular Class="mt-3" Size="Size.Small" Indeterminate="true" />
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.button">Экспорт</MudText>
-                    }
+                <MudButton Color="Color.Success" OnClick="Confirm">
+                    Экспорт
                 </MudButton>
             </MudStack>
         }
@@ -45,55 +39,50 @@
                 <MudProgressCircular Size="Size.Medium" Color="Color.Info" Indeterminate />
             </MudStack>
         }
-
     </DialogContent>
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }  
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }  
     private RemoteGoodDto? _selectedRemoteGood { get; set; }
     private RemoteCounterpartyDto? _selectedSender { get; set; }
     private RemoteCounterpartyDto? _selectedRecipient { get; set; }
     private RemoteCounterpartyDto? _selectedCarrier { get; set; }
     private RemoteCounterpartyDto? _selectedPayer { get; set; }
     private List<RemoteGoodDto>? _goods { get; set; } = new();
-    private List<RemoteCounterpartyDto>? _counterparties { get; set; } = new();
-    private bool _processing { get; set; } = false;
+    private List<RemoteCounterpartyDto>? _counterparties { get; set; } = new(); 
     private bool _dataIsReedy { get; set; } = false;
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) => await RunSafe(async () =>
     {
-        if(firstRender)
+        if (firstRender)
         {
             _goods = await RemoteGoodClient.GetAllAsync();
             _counterparties = await RemoteCounterpartyClient.GetAllAsync();
             _dataIsReedy = true;
             StateHasChanged();
         }
-    }
+    });
 
-    private async Task<IEnumerable<RemoteGoodDto>?> SearchRemoteGood(string value, CancellationToken cancellationToken)
+    private Task<IEnumerable<RemoteGoodDto>?> SearchRemoteGood(string value, CancellationToken cancellationToken)
     {
-        // In real life use an asynchronous function for fetching data from an api.
-        await Task.Delay(5);
-
-        // if text is null or empty, don't return values (drop-down will not open)
         if (string.IsNullOrEmpty(value))
-            return _goods;
-        return _goods?.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase));
-    }
-    private async Task<IEnumerable<RemoteCounterpartyDto>?> SearchRemoteCounterparty(string value, CancellationToken cancellationToken)
-    {
-        // In real life use an asynchronous function for fetching data from an api.
-        await Task.Delay(5);
+            return Task.FromResult<IEnumerable<RemoteGoodDto>?>(_goods);
 
-        // if text is null or empty, don't return values (drop-down will not open)
-        if (string.IsNullOrEmpty(value))
-            return _counterparties;
-        return _counterparties?.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+        return Task.FromResult(_goods?.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
+
+    private Task<IEnumerable<RemoteCounterpartyDto>?> SearchRemoteCounterparty(string value, CancellationToken cancellationToken)
+    { 
+        if (string.IsNullOrEmpty(value)) 
+            return Task.FromResult<IEnumerable<RemoteCounterpartyDto>?>(_counterparties);
+
+        return Task.FromResult(_counterparties?.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
+    }
+
     private void Confirm()
     {
-        MudDialog.Close(new ExportToExcelFiltersDto
+        MudDialog?.Close(new ExportToExcelFiltersDto
         {
             GoodId = _selectedRemoteGood is null ? Guid.Empty : _selectedRemoteGood.Id,
             SenderId = _selectedSender is null ? Guid.Empty : _selectedSender.Id,
@@ -102,8 +91,9 @@
             RecipientId = _selectedRecipient is null ? Guid.Empty : _selectedRecipient.Id,
         });
     }
+
     private void Cancel()
     {
-        MudDialog.Cancel();
+        MudDialog?.Cancel();
     }
 }

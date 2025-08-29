@@ -1,4 +1,4 @@
-﻿using ASW.Shared.Extentions;
+﻿using ASW.Shared.Extension;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Net.Http.Json;

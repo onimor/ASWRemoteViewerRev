@@ -1,4 +1,4 @@
-﻿using ASW.Shared.Extentions;
+﻿using ASW.Shared.Extension;
 using System;
 using System.Globalization;
 using System.Text.Json;

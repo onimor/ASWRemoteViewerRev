@@ -6,7 +6,7 @@ using ASW.RemoteViewing.Shared.Constants;
 using ASW.RemoteViewing.Shared.Dto.User;
 using ASW.RemoteViewing.Shared.Requests.User;
 using ASW.RemoteViewing.Shared.Security;
-using ASW.Shared.Extentions;
+using ASW.Shared.Extension;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore; 
 

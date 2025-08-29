@@ -2,7 +2,7 @@
 using ASW.RemoteViewing.Infrastructure.Extensions.EndpointExtensions;
 using ASW.RemoteViewing.Shared.Dto.RemoteAxes;
 using ASW.RemoteViewing.Shared.Security;
-using ASW.Shared.Extentions;
+using ASW.Shared.Extension;
 using ASW.Shared.Requests.RemoteAxesWeight;
 
 namespace ASW.RemoteViewing.Features.RemoteAxesWeight.Endpoints;

@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Shared\ASW.Shared.Dto\ASW.Shared.Dto.csproj" />
-    <ProjectReference Include="..\..\..\Shared\ASW.Shared.Extentions\ASW.Shared.Extentions.csproj" />
+    <ProjectReference Include="..\..\..\Shared\ASW.Shared.Extentions\ASW.Shared.Extension.csproj" />
     <ProjectReference Include="..\..\..\Shared\ASW.Shared.Requests\ASW.Shared.Requests.csproj" />
     <ProjectReference Include="..\ASW.RemoteViewing.Client\ASW.RemoteViewing.Client.csproj" />
     <PackageReference Include="AspNetCore.Authentication.ApiKey" Version="8.0.1" />

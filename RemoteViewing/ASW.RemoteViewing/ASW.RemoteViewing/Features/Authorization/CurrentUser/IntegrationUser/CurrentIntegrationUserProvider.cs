@@ -1,7 +1,7 @@
 ﻿using ASW.RemoteViewing.Features.Authorization.UserContext;
 using ASW.RemoteViewing.Infrastructure.Data;
 using ASW.RemoteViewing.Shared.Dto.IntegrationUser;
-using ASW.Shared.Extentions;
+using ASW.Shared.Extension;
 using Microsoft.EntityFrameworkCore;
 
 namespace ASW.RemoteViewing.Features.Authorization.CurrentUser.IntegrationUser;

@@ -174,7 +174,7 @@
                         WeighingStage = _selectedWeighingStage,
                         Filters = exportToExcelFilters
                     });
-                await JSRuntime.InvokeVoidAsync("saveExcelFromByteArray", fileName, bytes);
+                await JSRuntime.SaveAsExcelAsync(fileName, bytes);
             }
         });
         _processingExportToExcel = false;

@@ -1,5 +1,4 @@
-using ASW.RemoteViewing.Shared.Responses;
-using ASW.Shared.Extentions;
+using ASW.Shared.Extension;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 

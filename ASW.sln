@@ -23,7 +23,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASW.RemoteViewing.Shared.Co
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASW.Shared.Dto", "Shared\ASW.Shared.Dto\ASW.Shared.Dto.csproj", "{6934DA89-A64F-4A54-9A9A-EAC287EAC34B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASW.Shared.Extentions", "Shared\ASW.Shared.Extentions\ASW.Shared.Extentions.csproj", "{BA5963F6-3925-4D94-B8DF-6FD61A94DB8C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASW.Shared.Extension", "Shared\ASW.Shared.Extentions\ASW.Shared.Extension.csproj", "{BA5963F6-3925-4D94-B8DF-6FD61A94DB8C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASW.Shared.Requests", "Shared\ASW.Shared.Requests\ASW.Shared.Requests.csproj", "{6A88A4F4-1E30-4A80-8F04-AB538C218243}"
 EndProject

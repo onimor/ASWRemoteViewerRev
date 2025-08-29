@@ -6,7 +6,7 @@ using ASW.RemoteViewing.Shared.Dto.User;
 using ASW.RemoteViewing.Shared.Requests;
 using ASW.RemoteViewing.Shared.Responses.Authentication;
 using ASW.RemoteViewing.Shared.Security;
-using ASW.Shared.Extentions;
+using ASW.Shared.Extension;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;

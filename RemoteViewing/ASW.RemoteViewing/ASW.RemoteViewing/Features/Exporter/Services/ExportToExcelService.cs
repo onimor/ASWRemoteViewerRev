@@ -1,6 +1,6 @@
 ﻿using ASW.RemoteViewing.Features.RemoteWeighing.Services;
 using ASW.RemoteViewing.Shared.Requests.RemoteWeighing;
-using ASW.Shared.Extentions;
+using ASW.Shared.Extension;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 

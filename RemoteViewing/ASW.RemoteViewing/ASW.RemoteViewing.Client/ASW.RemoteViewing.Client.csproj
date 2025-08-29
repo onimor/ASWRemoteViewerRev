@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Shared\ASW.Shared.Extentions\ASW.Shared.Extentions.csproj" />
+    <ProjectReference Include="..\..\..\Shared\ASW.Shared.Extentions\ASW.Shared.Extension.csproj" />
     <ProjectReference Include="..\..\..\Shared\ASW.Shared.Requests\ASW.Shared.Requests.csproj" />
     <ProjectReference Include="..\..\Shared\ASW.RemoteViewing.Shared.Constants\ASW.RemoteViewing.Shared.Constants.csproj" />
     <ProjectReference Include="..\..\Shared\ASW.RemoteViewing.Shared.Dto\ASW.RemoteViewing.Shared.Dto.csproj" />

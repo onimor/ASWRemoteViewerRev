@@ -4,7 +4,7 @@ using ASW.RemoteViewing.Infrastructure.Data;
 using ASW.RemoteViewing.Infrastructure.Security.Key;
 using ASW.RemoteViewing.Shared.Requests;
 using ASW.RemoteViewing.Shared.Security;
-using ASW.Shared.Extentions;
+using ASW.Shared.Extension;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;

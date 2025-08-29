@@ -4,7 +4,7 @@ using ASW.RemoteViewing.Shared.Dto.RemoteWeighing;
 using ASW.RemoteViewing.Shared.Requests.RemoteWeighing;
 using ASW.RemoteViewing.Shared.Security;
 using ASW.RemoteViewing.Shared.Utilities.ModelBinding;
-using ASW.Shared.Extentions;
+using ASW.Shared.Extension;
 using ASW.Shared.Requests.RemoteWeighing;
 using Microsoft.AspNetCore.Mvc;
 
